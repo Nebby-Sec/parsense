@@ -405,6 +405,27 @@ const curatedCourses = [
 ];
 let currentCourses = curatedCourses;
 
+// The public Overpass mirrors are frequently overloaded and can hang for
+// minutes. Give each one a hard deadline so we fail over (and ultimately fall
+// back to the curated list) instead of leaving the user on a spinner forever.
+const OVERPASS_TIMEOUT_MS = 15000;
+
+async function overpassFetch(url, query) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), OVERPASS_TIMEOUT_MS);
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      body: "data=" + encodeURIComponent(query),
+      signal: ctrl.signal,
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.json();
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 // Turns an OSM opening_hours string into something readable at a glance.
 function formatHours(raw) {
   if (!raw) return null;
@@ -555,11 +576,9 @@ async function loadNearbyCourses(lat, lon, label) {
     let data = null;
     for (const url of endpoints) {
       try {
-        const res = await fetch(url, { method: "POST", body: "data=" + encodeURIComponent(query) });
-        if (!res.ok) continue;
-        data = await res.json();
+        data = await overpassFetch(url, query);
         break;
-      } catch { /* try next mirror */ }
+      } catch { /* mirror was slow or down — try the next one */ }
     }
     if (!data) throw new Error("all mirrors failed");
     const seen = new Set();
@@ -772,11 +791,9 @@ async function loadOhioCourses() {
     let data = null;
     for (const url of endpoints) {
       try {
-        const res = await fetch(url, { method: "POST", body: "data=" + encodeURIComponent(query) });
-        if (!res.ok) continue;
-        data = await res.json();
+        data = await overpassFetch(url, query);
         break;
-      } catch { /* try next mirror */ }
+      } catch { /* mirror was slow or down — try the next one */ }
     }
     if (!data) throw new Error("all mirrors failed");
     const names = [...new Set(
