@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ParSense — Golf Companion</title>
+<meta name="theme-color" content="#0e1512">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="stylesheet" href="style.css?v=7">
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div id="golfBuddy" class="golf-buddy" title="Click me!">
+      <span id="buddyBubble" class="buddy-bubble" hidden></span>
+      <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-label="Golf ball mascot">
+        <!-- ball -->
+        <circle cx="32" cy="34" r="26" fill="#ffffff" stroke="#d8dde2" stroke-width="1.5"/>
+        <!-- dimples -->
+        <circle cx="20" cy="26" r="1.6" fill="#dfe5ea"/>
+        <circle cx="44" cy="27" r="1.6" fill="#dfe5ea"/>
+        <circle cx="14" cy="36" r="1.6" fill="#dfe5ea"/>
+        <circle cx="50" cy="38" r="1.6" fill="#dfe5ea"/>
+        <circle cx="22" cy="52" r="1.6" fill="#dfe5ea"/>
+        <circle cx="42" cy="53" r="1.6" fill="#dfe5ea"/>
+        <circle cx="32" cy="57" r="1.6" fill="#dfe5ea"/>
+        <!-- visor -->
+        <path d="M 14 22 Q 32 8 50 22 L 50 25 Q 32 13 14 25 Z" fill="#1a7a3e"/>
+        <path d="M 10 23 Q 32 10 54 23 L 56 27 Q 32 15 8 27 Z" fill="#22a24f"/>
+        <!-- eyes -->
+        <circle cx="25" cy="34" r="3.2" fill="#1f2933"/>
+        <circle cx="39" cy="34" r="3.2" fill="#1f2933"/>
+        <circle cx="26.2" cy="32.8" r="1.1" fill="#ffffff"/>
+        <circle cx="40.2" cy="32.8" r="1.1" fill="#ffffff"/>
+        <!-- cheeks -->
+        <circle cx="20" cy="41" r="2.6" fill="#f7b2b2" opacity="0.7"/>
+        <circle cx="44" cy="41" r="2.6" fill="#f7b2b2" opacity="0.7"/>
+        <!-- smile -->
+        <path d="M 26 43 Q 32 48 38 43" stroke="#1f2933" stroke-width="2" fill="none" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div class="brand">⛳ <span>ParSense</span></div>
+    <nav class="tabs">
+      <button class="tab-btn active" data-tab="profile">Profile</button>
+      <button class="tab-btn" data-tab="coach">AI Coach</button>
+      <button class="tab-btn" data-tab="courses">Course Selection</button>
+      <button class="tab-btn" data-tab="score">Scoreboard</button>
+      <button class="tab-btn" data-tab="rounds">Round Archive</button>
+      <button class="tab-btn" data-tab="weather">Weather</button>
+    </nav>
+    <select id="tabSelect" class="tab-select" aria-label="Choose a section"></select>
+  </header>
+
+  <main>
+    <!-- COACH TAB -->
+    <section id="coach" class="tab-panel">
+      <div class="chat-wrap">
+        <div id="chatLog" class="chat-log">
+          <div class="msg bot" id="coachGreeting">Hey, I'm your ParSense caddie 🏌️. Ask me about your swing, club selection, putting, or say "how am I doing" for stats from your logged rounds.</div>
+        </div>
+        <form id="chatForm" class="chat-form">
+          <input id="chatInput" type="text" placeholder="e.g. I keep slicing my driver..." autocomplete="off" />
+          <button type="submit">Send</button>
+        </form>
+        <div class="quick-chips">
+          <button class="chip" data-q="I keep slicing my driver">Slicing driver</button>
+          <button class="chip" data-q="My putting is inconsistent">Putting tips</button>
+          <button class="chip" data-q="How am I doing">My stats</button>
+          <button class="chip" data-q="What club for 150 yards">Club for 150y</button>
+        </div>
+      </div>
+
+      <div class="card" id="shotPlannerCard">
+        <h2>Shot Planner</h2>
+        <p class="muted small">Adjusts your yardage for wind, elevation and temperature, then picks the club from your profile distances.</p>
+        <div class="planner-grid">
+          <label>Distance to pin (yds)
+            <input type="number" id="spDistance" placeholder="150" min="30" max="350">
+          </label>
+          <label>Wind
+            <select id="spWind">
+              <option value="none">Calm / no factor</option>
+              <option value="into">Into your face</option>
+              <option value="helping">At your back</option>
+              <option value="cross">Crosswind</option>
+            </select>
+          </label>
+          <label>Wind speed (mph)
+            <input type="number" id="spWindMph" placeholder="0" min="0" max="50">
+          </label>
+          <label>Elevation
+            <select id="spElevation">
+              <option value="level">Level green</option>
+              <option value="uphill">Uphill</option>
+              <option value="downhill">Downhill</option>
+            </select>
+          </label>
+        </div>
+        <button id="spPlanBtn" class="planner-btn">Plan the Shot</button>
+        <div id="spResult" class="planner-result" hidden></div>
+      </div>
+    </section>
+
+    <!-- SCORE TAB (live scorecard) -->
+    <section id="score" class="tab-panel">
+      <div class="card" id="scoreSetup">
+        <h2>Start a Round</h2>
+        <div class="score-setup-form">
+          <label>Course
+            <select id="scCourseSelect"></select>
+          </label>
+          <label id="scCustomWrap" hidden>Course name
+            <input type="text" id="scCourseCustom" placeholder="Start typing an Ohio course..." list="ohioCourseList" autocomplete="off">
+            <datalist id="ohioCourseList"></datalist>
+            <span class="muted small" id="scCustomHint"></span>
+          </label>
+          <label>Holes
+            <select id="scHolesSelect">
+              <option value="18">18</option>
+              <option value="9">9</option>
+            </select>
+          </label>
+          <button id="startRoundBtn">Start Round</button>
+        </div>
+      </div>
+
+      <div class="card" id="scoreCardPanel" hidden>
+        <div class="score-head">
+          <div>
+            <h2 id="scCourseName">Course</h2>
+            <p class="muted small" id="scRoundDate"></p>
+          </div>
+          <div class="score-summary">
+            <div class="stat"><div class="val" id="scThru">0</div><div class="label">Thru</div></div>
+            <div class="stat"><div class="val" id="scStrokes">0</div><div class="label">Strokes</div></div>
+            <div class="stat"><div class="val" id="scToPar">E</div><div class="label">To Par</div></div>
+          </div>
+        </div>
+        <div class="score-table-wrap">
+          <table class="score-table">
+            <thead>
+              <tr><th>Hole</th><th>Par</th><th>Score</th><th>±</th></tr>
+            </thead>
+            <tbody id="scTableBody"></tbody>
+          </table>
+        </div>
+        <div class="score-actions">
+          <button id="finishRoundBtn">Finish & Save Round</button>
+          <button id="cancelRoundBtn" class="secondary">Discard Round</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ROUNDS TAB -->
+    <section id="rounds" class="tab-panel">
+      <div class="panel-grid">
+        <div class="card">
+          <h2>Log a Round</h2>
+          <form id="roundForm" class="round-form">
+            <label>Course<input type="text" id="rCourse" required placeholder="Pebble Beach"></label>
+            <label>Date<input type="date" id="rDate" required></label>
+            <label>Holes
+              <select id="rHoles">
+                <option value="18">18</option>
+                <option value="9">9</option>
+              </select>
+            </label>
+            <label>Par<input type="number" id="rPar" value="72" required></label>
+            <label>Score<input type="number" id="rScore" required placeholder="88"></label>
+            <label>Putts (optional)<input type="number" id="rPutts" placeholder="32"></label>
+            <label>Fairways Hit (optional)<input type="number" id="rFairways" placeholder="7"></label>
+            <button type="submit">Save Round</button>
+          </form>
+        </div>
+
+        <div class="card">
+          <h2>Your Stats</h2>
+          <div id="statsBox" class="stats-box">
+            <p class="muted">Log a round to see stats.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Round History</h2>
+        <table class="round-table">
+          <thead>
+            <tr><th>Date</th><th>Course</th><th>Holes</th><th>Score</th><th>To Par</th><th>Putts</th><th>FIR</th><th></th></tr>
+          </thead>
+          <tbody id="roundTableBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- COURSES TAB -->
+    <section id="courses" class="tab-panel">
+      <div class="card">
+        <h2>Find & Book a Tee Time</h2>
+        <p class="muted small" id="courseAreaNote">Showing real courses near Ada, OH (45810).</p>
+        <div class="course-search">
+          <input type="text" id="courseSearch" placeholder="Search courses by name or city...">
+        </div>
+        <div class="course-controls">
+          <button type="button" id="useLocationBtn" class="loc-btn">📍 Use my exact location</button>
+          <label class="sort-wrap">Sort by
+            <select id="courseSort">
+              <option value="distance">Closest to me</option>
+              <option value="easy">Easier first (shorter)</option>
+              <option value="hard">Tougher first (longer)</option>
+            </select>
+          </label>
+        </div>
+        <p class="muted small" id="locStatus" hidden></p>
+        <div id="courseList" class="course-list"></div>
+      </div>
+    </section>
+
+    <!-- WEATHER TAB -->
+    <section id="weather" class="tab-panel">
+      <div class="card">
+        <h2>Live Golf Weather</h2>
+        <div class="weather-search">
+          <input type="text" id="weatherLocation" placeholder="City, e.g. Ada, OH" value="Ada, OH">
+          <button id="weatherBtn">Check</button>
+        </div>
+        <div id="weatherResult" class="weather-result"></div>
+      </div>
+
+      <div class="card">
+        <h2>Live Radar</h2>
+        <p class="muted small" id="radarCaption">Live precipitation radar centered on Ada, OH — powered by Windy.com.</p>
+        <div class="radar-wrap">
+          <iframe
+            id="radarFrame"
+            title="Live weather radar"
+            src="https://embed.windy.com/embed2.html?lat=40.770&lon=-83.823&detailLat=40.770&detailLon=-83.823&zoom=8&level=surface&overlay=radar&product=radar&menu=&message=&marker=true&calendar=now&pressure=&type=map&location=coordinates&detail=&metricWind=mph&metricTemp=%C2%B0F&radarRange=-1"
+            frameborder="0"
+            loading="lazy"></iframe>
+        </div>
+      </div>
+    </section>
+
+    <!-- PROFILE TAB -->
+    <section id="profile" class="tab-panel active">
+      <div class="card">
+        <h2>Your Golfer Profile</h2>
+        <div class="avatar-row">
+          <div id="avatarWrap" class="avatar-wrap" title="Click for a new look"></div>
+          <span class="muted small">Click your avatar to generate a new one</span>
+        </div>
+        <p class="muted small">Saved only on this device — the Coach, Courses, and Weather tabs tailor themselves to what you enter here.</p>
+        <form id="profileForm" class="round-form profile-form">
+          <label>Name<input type="text" id="pfName" placeholder="First name"></label>
+          <label>Home town<input type="text" id="pfHome" placeholder="e.g. Ada, OH"></label>
+          <label>Skill level
+            <select id="pfSkill">
+              <option value="">Prefer not to say</option>
+              <option value="Beginner">Beginner — no handicap yet</option>
+              <option value="High handicap">High handicap (20+)</option>
+              <option value="Mid handicap">Mid handicap (10–19)</option>
+              <option value="Low handicap">Low handicap (1–9)</option>
+              <option value="Scratch">Scratch or better (0)</option>
+            </select>
+          </label>
+          <label>Typical 18-hole score<input type="number" id="pfTypicalScore" placeholder="e.g. 95" min="50" max="180"></label>
+          <label>Driver distance (yards)<input type="number" id="pfDriver" placeholder="e.g. 230" min="100" max="400"></label>
+          <label>7-iron distance (yards)<input type="number" id="pfSevenIron" placeholder="e.g. 150" min="60" max="250"></label>
+          <button type="submit">Save Profile</button>
+          <span class="muted small" id="pfStatus"></span>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p>
+      Course data © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors (ODbL) ·
+      Weather by <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo</a> (CC BY 4.0) ·
+      Radar by <a href="https://www.windy.com/" target="_blank" rel="noopener noreferrer">Windy.com</a>
+    </p>
+    <p>
+      Your profile, rounds and scores stay in this browser. Looking up weather or nearby courses sends your
+      location to those services to answer the request. ParSense is not affiliated with any course listed.
+      Conditions and advice are estimates — use your own judgement, especially around lightning.
+    </p>
+  </footer>
+</div>
+<script src="app.js?v=7"></script>
+</body>
+</html>
