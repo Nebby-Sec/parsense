@@ -51,6 +51,10 @@ No API keys are required, and no server is needed.
 
 ---
 
+## Development
+
+Commits in this repository carry a `Co-Authored-By: Claude` trailer, reflecting that the project was built with AI assistance.
+
 ## Running locally
 
 Open `index.html` directly, or serve it (needed for the service worker and geolocation):
