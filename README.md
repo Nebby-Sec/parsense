@@ -4,6 +4,8 @@ A golf companion web app — AI caddie, live scorecard, course finder, and golf-
 
 **Live:** [parsense-golf.netlify.app](https://parsense-golf.netlify.app)
 
+> **A personal, non-commercial project.** ParSense is built and shared for free with friends. It takes no payments, runs no ads, collects nothing server-side, and is not a commercial product or service. The weather and map data it uses is provided under free/non-commercial terms, and keeping the project non-commercial is what keeps that usage within those terms.
+
 ---
 
 ## Features
