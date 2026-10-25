@@ -94,16 +94,6 @@ The Windy radar is a third-party embed and may set its own cookies. If you deplo
 
 ---
 
-## Security
-
-- **No backend, no accounts, no API keys** — there is no server to breach, no credentials to steal, and no secrets in the source.
-- **No third-party JavaScript** — zero npm dependencies, so no supply-chain exposure.
-- **Output escaping** — all third-party data (OpenStreetMap tags are world-editable) is escaped for both text and HTML attributes before rendering.
-- **Link validation** — only `http(s)` URLs are rendered as links; `javascript:` and `data:` URLs are dropped.
-- **Content Security Policy** — `_headers` ships a strict CSP that permits scripts only from the app's own origin and network calls only to the specific weather/course APIs it uses, plus `nosniff`, `frame-ancestors 'none'`, a locked-down `Permissions-Policy`, and a sandboxed radar iframe.
-
-If you find a security issue, please open an issue on this repository.
-
 ## Known limitations
 
 - The coach is **rule-based keyword matching**, not a large language model.
