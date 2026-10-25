@@ -346,6 +346,7 @@ body {
 .round-form button { margin-top: 4px; }
 
 .stats-box { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.stats-note { grid-column: 1 / -1; margin: 2px 0 0; }
 .stat {
   background: var(--panel-2);
   border: 1px solid var(--border);

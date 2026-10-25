@@ -68,27 +68,47 @@ function renderRounds() {
   });
 }
 
+// Rounds of different lengths can't be averaged raw — a 9-hole 45 and an
+// 18-hole 92 average to a meaningless 68.5. Everything is scaled to an
+// 18-hole equivalent so the numbers are comparable.
+function per18(value, holes) {
+  const h = Number(holes) || 18;
+  return value * (18 / h);
+}
+
 function renderStats() {
   const rounds = loadRounds();
   if (rounds.length === 0) {
     statsBox.innerHTML = `<p class="muted">Log a round to see stats.</p>`;
     return;
   }
-  const scores = rounds.map(r => r.score);
-  const avg = (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1);
-  const best = Math.min(...scores);
-  const toParAvg = (rounds.reduce((sum, r) => sum + (r.score - r.par), 0) / rounds.length).toFixed(1);
+
+  const equivScores = rounds.map(r => per18(r.score, r.holes));
+  const avg = (equivScores.reduce((a, b) => a + b, 0) / equivScores.length).toFixed(1);
+  const best = Math.round(Math.min(...equivScores));
+  const toParAvg = (
+    rounds.reduce((sum, r) => sum + per18(r.score - r.par, r.holes), 0) / rounds.length
+  ).toFixed(1);
+
   const puttsLogged = rounds.filter(r => r.putts);
   const avgPutts = puttsLogged.length
-    ? (puttsLogged.reduce((s, r) => s + Number(r.putts), 0) / puttsLogged.length).toFixed(1)
+    ? (puttsLogged.reduce((s, r) => s + per18(Number(r.putts), r.holes), 0) / puttsLogged.length).toFixed(1)
     : "-";
+
+  // Only mention the scaling when rounds of mixed length are actually present.
+  const lengths = new Set(rounds.map(r => String(r.holes || 18)));
+  const mixed = lengths.size > 1 || !lengths.has("18");
+  const note = mixed
+    ? `<p class="muted small stats-note">Scaled to 18-hole equivalents so 9- and 18-hole rounds compare fairly.</p>`
+    : "";
 
   statsBox.innerHTML = `
     <div class="stat"><div class="val">${rounds.length}</div><div class="label">Rounds</div></div>
-    <div class="stat"><div class="val">${avg}</div><div class="label">Avg Score</div></div>
-    <div class="stat"><div class="val">${best}</div><div class="label">Best Score</div></div>
+    <div class="stat"><div class="val">${avg}</div><div class="label">${mixed ? "Avg / 18" : "Avg Score"}</div></div>
+    <div class="stat"><div class="val">${best}</div><div class="label">${mixed ? "Best / 18" : "Best Score"}</div></div>
     <div class="stat"><div class="val">${toParAvg > 0 ? "+" + toParAvg : toParAvg}</div><div class="label">Avg To Par</div></div>
-    <div class="stat"><div class="val">${avgPutts}</div><div class="label">Avg Putts</div></div>
+    <div class="stat"><div class="val">${avgPutts}</div><div class="label">${mixed ? "Putts / 18" : "Avg Putts"}</div></div>
+    ${note}
   `;
 }
 
@@ -163,14 +183,19 @@ function statsSummary() {
   const greet = p && p.name ? `${p.name}, ` : "";
   const rounds = loadRounds();
   if (rounds.length === 0) return `${greet}you haven't logged any rounds yet — head to the Rounds tab and log one so I can give you personalized insight.`;
-  const scores = rounds.map(r => r.score);
-  const avg = (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1);
-  const best = Math.min(...scores);
+  // Same 18-hole scaling as the stats panel, so the two never disagree.
+  const equiv = rounds.map(r => per18(r.score, r.holes));
+  const avg = (equiv.reduce((a, b) => a + b, 0) / equiv.length).toFixed(1);
+  const best = Math.round(Math.min(...equiv));
   const last = rounds[rounds.length - 1];
+  const mixed = new Set(rounds.map(r => String(r.holes || 18))).size > 1
+    || !new Set(rounds.map(r => String(r.holes || 18))).has("18");
+  const basis = mixed ? " (per 18 holes)" : "";
   const trend = rounds.length >= 2
-    ? (rounds[rounds.length - 1].score < rounds[0].score ? "trending down (nice!)" : "holding steady")
+    ? (per18(rounds[rounds.length - 1].score, rounds[rounds.length - 1].holes) < per18(rounds[0].score, rounds[0].holes)
+        ? "trending down (nice!)" : "holding steady")
     : "just getting started";
-  let msg = `${greet}you've logged ${rounds.length} round(s). Average score: ${avg}, best: ${best}. Your scoring trend looks ${trend}. Last round was ${last.score} at ${last.course}.`;
+  let msg = `${greet}you've logged ${rounds.length} round(s). Average score${basis}: ${avg}, best: ${best}. Your scoring trend looks ${trend}. Last round was ${last.score} at ${last.course}.`;
   if (p && p.typicalScore) {
     const diff = avg - p.typicalScore;
     if (diff <= -2) msg += ` You're averaging below your typical ${p.typicalScore} — the work is paying off.`;
@@ -832,7 +857,9 @@ function renderScorecard() {
   scoreSetup.hidden = true;
   scoreCardPanel.hidden = false;
   scCourseName.textContent = round.course;
-  scRoundDate.textContent = `${round.date} • ${round.holes.length} holes`;
+  const totalPar = round.holes.reduce((s, h) => s + h.par, 0);
+  scRoundDate.textContent = `${round.date} • ${round.holes.length} holes • par ${totalPar}`
+    + (round.parsRecalled ? " • saved card for this course" : "");
 
   let rows = "";
   let nineStrokes = 0, ninePar = 0, ninePlayed = 0;
@@ -877,6 +904,24 @@ function renderScorecard() {
   scToPar.textContent = played.length ? formatToPar(totalStrokes - playedPar) : "E";
 }
 
+// Par layouts you've corrected are remembered per course and hole count, so the
+// next round there starts with the real scorecard instead of the generic one.
+function loadCoursePars() { return store.get("golf_course_pars", {}); }
+
+function saveCoursePars(course, pars) {
+  if (!course) return;
+  const all = loadCoursePars();
+  all[course] = all[course] || {};
+  all[course][String(pars.length)] = pars;
+  store.set("golf_course_pars", all);
+}
+
+function recalledPars(course, holeCount) {
+  const saved = loadCoursePars()[course];
+  const pars = saved && saved[String(holeCount)];
+  return Array.isArray(pars) && pars.length === holeCount ? pars : null;
+}
+
 startRoundBtn.addEventListener("click", () => {
   let course = scCourseSelect.value;
   if (course === "__other__") {
@@ -884,10 +929,12 @@ startRoundBtn.addEventListener("click", () => {
     if (!course) { scCourseCustom.focus(); return; }
   }
   const holeCount = Number(scHolesSelect.value);
-  const pars = DEFAULT_PARS_18.slice(0, holeCount);
+  const remembered = recalledPars(course, holeCount);
+  const pars = remembered || DEFAULT_PARS_18.slice(0, holeCount);
   saveActiveRound({
     course,
     date: new Date().toISOString().slice(0, 10),
+    parsRecalled: !!remembered,
     holes: pars.map(p => ({ par: p, strokes: null })),
   });
   renderScorecard();
@@ -898,7 +945,8 @@ scTableBody.addEventListener("click", e => {
   if (!btn) return;
   const round = loadActiveRound();
   const h = round.holes[Number(btn.dataset.hole)];
-  switch (btn.dataset.act) {
+  const act = btn.dataset.act;
+  switch (act) {
     case "par-": h.par = Math.max(3, h.par - 1); break;
     case "par+": h.par = Math.min(6, h.par + 1); break;
     case "str-":
@@ -907,6 +955,13 @@ scTableBody.addEventListener("click", e => {
     case "str+": h.strokes = h.strokes == null ? h.par : Math.min(15, h.strokes + 1); break;
   }
   saveActiveRound(round);
+  // Remember a corrected par layout immediately, so it survives even if the
+  // round is later discarded rather than finished.
+  if (act === "par-" || act === "par+") {
+    round.parsRecalled = true;
+    saveActiveRound(round);
+    saveCoursePars(round.course, round.holes.map(x => x.par));
+  }
   renderScorecard();
 });
 
