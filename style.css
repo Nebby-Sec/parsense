@@ -653,6 +653,7 @@ body {
   margin-bottom: 12px;
 }
 .wx-temp { font-size: 36px; font-weight: 700; }
+.wx-place { font-weight: 600; }
 .wx-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 .wx-metric { background: var(--panel-2); border-radius: 10px; padding: 10px; text-align: center; }
 .wx-metric .val { font-weight: 700; font-size: 16px; }

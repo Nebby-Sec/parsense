@@ -685,7 +685,7 @@ async function checkWeather() {
       <div class="wx-current">
         <div class="wx-temp">${Math.round(c.temperature_2m)}°F</div>
         <div>
-          <div style="font-weight:600;">${escapeHtml(name)}${admin1 ? ", " + escapeHtml(admin1) : ""}${country ? ", " + escapeHtml(country) : ""}</div>
+          <div class="wx-place">${escapeHtml(name)}${admin1 ? ", " + escapeHtml(admin1) : ""}${country ? ", " + escapeHtml(country) : ""}</div>
           <div class="muted">${weatherCodeText(c.weather_code)}</div>
         </div>
       </div>
